@@ -1,132 +1,191 @@
+// server/controllers/session.controller.js
 import { gemini } from "../config/gemini.config.js";
 
 const MODEL = "gemini-2.0-flash";
 
-// ----------------------
-// Extract JSON safely
-// ----------------------
+/**
+ * Try to parse JSON robustly:
+ * - Try direct JSON.parse
+ * - Fallback: find the first {...} block with regex and parse
+ */
 function extractJSON(text) {
-  const cleaned = text
+  if (!text) throw new Error("Empty AI response");
+
+  // Try direct parse first (strip code fences)
+  let cleaned = text
     .replace(/```json/gi, "")
     .replace(/```/g, "")
     .trim();
 
-  return JSON.parse(cleaned);
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    // fallback - find first JSON-looking object
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error("No JSON found in AI response");
+    return JSON.parse(m[0]);
+  }
 }
 
-// ----------------------
-// Start Session
-// ----------------------
+// ------- START SESSION -------
 export const startSession = async (req, res) => {
   try {
     const { name } = req.body;
 
+    // Make the first question deterministic: ask opponent's name in Hinglish style
     const prompt = `
-You are a toxic, sassy bestie AI.
-Return EXACTLY 1 JSON object only.
+You are a Hinglish toxic-bestie AI.
 
-Format:
+This is ALWAYS the FIRST question of the session.
+
+Ask only: "Opposition ka naam kya hai babe?"
+
+Return EXACT JSON:
 {
   "id": 1,
-  "type": "slider" | "text" | "options",
-  "text": "your question",
+  "type": "text",
+  "text": "Opposition ka naam kya hai babe?",
   "min": 1,
   "max": 10,
-  "options": ["A","B"]
+  "options": []
 }
-
-User name: ${name}
+No backticks, no explanation.
 `;
 
-    // NEW SDK CALL
     const result = await gemini.generateContent({
       model: MODEL,
       contents: prompt,
     });
-
-    // NEW SDK RESPONSE FORMAT
-    const raw =
-      result.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "";
-
+    const raw = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
     const json = extractJSON(raw);
 
-    res.json({ question: json });
+    return res.json({ question: json });
   } catch (err) {
     console.error("Start Session Error:", err);
-    res.status(500).json({ error: "AI error" });
+    return res
+      .status(500)
+      .json({ error: "AI error", detail: String(err.message) });
   }
 };
 
-// ----------------------
-// Next Question
-// ----------------------
+// ------- NEXT QUESTION -------
 export const nextQuestion = async (req, res) => {
   try {
-    const { answers } = req.body;
+    // Expect full session context from frontend
+    const { name, questions = [], answers = {}, current = 0 } = req.body;
 
+    // Build prompt with full context so model "remembers"
     const prompt = `
-Given previous answers, generate 1 new unique question.
+You are a Hinglish toxic-bestie AI.
 
-Format:
+You MUST ask only 1 new question.
+You MUST continue flow logically.
+You MUST relate each question to:
+
+- user
+- opponent
+- their dynamic
+- emotional damage
+- psychology
+- relationship patterns
+
+NO random names.
+NO random characters (like Mahima).
+NO story.
+NO advice.
+Only QUESTIONS.
+
+Session:
+User: ${name}
+Opponent: ${answers[1] || "Unknown yet"}
+
+Previous Questions:
+${JSON.stringify(questions, null, 2)}
+
+Previous Answers:
+${JSON.stringify(answers, null, 2)}
+
+Ask a new question in Hinglish:
+- Flirty bestie tone
+- Psychological angle
+- 1 sentence
+- Only about user + opponent dynamic
+
+Return ONLY JSON format:
 {
   "id": number,
-  "type": "slider" | "text" | "options",
-  "text": "question",
+  "type": "text" | "slider" | "options",
+  "text": "short hinglish question",
   "min": 1,
   "max": 10,
-  "options": ["A","B"]
+  "options": []
 }
-
-Answers:
-${JSON.stringify(answers, null, 2)}
 `;
 
     const result = await gemini.generateContent({
       model: MODEL,
       contents: prompt,
     });
-
-    const raw =
-      result.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "";
-
+    const raw = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
     const json = extractJSON(raw);
 
-    res.json({ question: json });
+    return res.json({ question: json });
   } catch (err) {
     console.error("Next Session Error:", err);
-    res.status(500).json({ error: "AI error" });
+    return res
+      .status(500)
+      .json({ error: "AI error", detail: String(err.message) });
   }
 };
 
-// ----------------------
-// Final Output
-// ----------------------
+// ------- FINAL GENERATION -------
 export const finalGenerate = async (req, res) => {
   try {
-    const { name, answers } = req.body;
+    const { name, questions = [], answers = {} } = req.body;
 
     const prompt = `
-User: ${name}
+You are a Hinglish toxic-bestie storyteller.
+
+Create a revenge plan based on:
+- user name
+- opponent name
+- relationship patterns
+- emotional details
+- user psychology
+- all answers
+
+Tone:
+- Hinglish
+- best friend bitching vibe
+- flirty-toxic but SAFE
+- relatable psychology
+- TikTok story tone
+
+DO NOT invent random names.
+Use ONLY: ${name} and ${answers[1]}
+
+Use 3 short paragraphs.
+Return plain text only.
+
+Questions asked:
+${JSON.stringify(questions, null, 2)}
+
 Answers:
 ${JSON.stringify(answers, null, 2)}
-
-Generate a 3-paragraph spicy, funny revenge plan.
 `;
 
     const result = await gemini.generateContent({
       model: MODEL,
       contents: prompt,
     });
-
     const text =
-      result.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "No response";
+      result.candidates?.[0]?.content?.parts?.[0]?.text || "No response";
 
-    res.json({ output: text });
+    return res.json({ output: text });
   } catch (err) {
     console.error("Final Generate Error:", err);
-    res.status(500).json({ error: "AI error" });
+    return res
+      .status(500)
+      .json({ error: "AI error", detail: String(err.message) });
   }
 };

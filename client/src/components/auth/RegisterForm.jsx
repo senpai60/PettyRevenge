@@ -1,8 +1,11 @@
 import React, { useState } from "react";
+import { useAuth } from "../../context/AuthContext";
 
 export default function RegisterForm({ switchMode }) {
+  const { signup } = useAuth();
+
   const [form, setForm] = useState({
-    fullname: "",
+    username: "",
     email: "",
     password: "",
   });
@@ -17,12 +20,11 @@ export default function RegisterForm({ switchMode }) {
     setLoading(true);
 
     try {
-      // 🔥 plug your API here
-      // await authApi.register(form.fullname, form.email, form.password);
+      await signup(form); // 🔥 Call AuthContext signup()
 
-      console.log("Register data:", form);
+      console.log("Registered:", form);
     } catch (err) {
-      console.error(err);
+      console.error("Register Error:", err);
     }
 
     setLoading(false);
@@ -31,16 +33,16 @@ export default function RegisterForm({ switchMode }) {
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
 
-      {/* Full Name */}
+      {/* Username */}
       <div className="space-y-2">
-        <label className="text-zinc-300">Full Name</label>
+        <label className="text-zinc-300">Username</label>
         <input
           type="text"
-          name="fullname"
-          value={form.fullname}
+          name="username"
+          value={form.username}
           onChange={handleChange}
           className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:border-zinc-500 outline-none"
-          placeholder="Vivek Satloniya"
+          placeholder="johndoe"
           required
         />
       </div>

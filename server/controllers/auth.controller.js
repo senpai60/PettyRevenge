@@ -19,6 +19,14 @@ export const signup = async (req, res, next) => {
 
     const token = generateToken(newUser);
 
+    // ⭐ SET COOKIE HERE
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: false,       // ❗ MUST be false on localhost
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    });
+
     return sendCreated(res, "User created successfully", {
       user: {
         id: newUser._id,
@@ -41,8 +49,15 @@ export const login = async (req, res, next) => {
     const isMatch = await user.matchPassword(password);
     if (!isMatch) return sendFail(res, "Invalid credentials", 401);
 
-    // If using JWT:
     const token = generateToken(user);
+
+    // ⭐ SET COOKIE HERE
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: false, // ❗ MUST be false on localhost
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
 
     return sendSuccess(res, 200, "Login successful", {
       user: {
@@ -50,7 +65,6 @@ export const login = async (req, res, next) => {
         username: user.username,
         email: user.email,
       },
-      // token,
     });
   } catch (err) {
     next(err);
@@ -59,9 +73,7 @@ export const login = async (req, res, next) => {
 
 export const logout = async (req, res, next) => {
   try {
-    // If using cookies:
     res.clearCookie("token");
-
     return sendSuccess(res, 200, "Logged out");
   } catch (err) {
     next(err);
@@ -70,9 +82,6 @@ export const logout = async (req, res, next) => {
 
 export const verify = async (req, res, next) => {
   try {
-    // Only if using JWT + middleware that sets req.user
-    // const user = await User.findById(req.user.id);
-
     return sendSuccess(res, 200, "User verified", {
       user: req.user || null,
     });

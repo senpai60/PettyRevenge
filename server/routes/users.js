@@ -1,4 +1,5 @@
 import express from "express";
+import { verifyAuth } from "../middleware/verifyAuth.middleware.js";
 import {
   signup,
   login,
@@ -12,6 +13,6 @@ const router = express.Router();
 router.post("/signup", signup);
 router.post("/login", login);
 router.post("/logout", logout);
-router.get("/verify", verify); 
+router.get("/verify",verifyAuth, verify); 
 
 export default router;

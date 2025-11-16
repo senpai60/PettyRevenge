@@ -1,6 +1,9 @@
 import React, { useState } from "react";
+import { useAuth } from "../../context/AuthContext";
 
 export default function LoginForm({ switchMode }) {
+  const { login } = useAuth();
+
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -16,12 +19,9 @@ export default function LoginForm({ switchMode }) {
     setLoading(true);
 
     try {
-      // 🔥 plug your API here
-      // await authApi.login(form.email, form.password);
-
-      console.log("Login data:", form);
+      await login(form); // 🔥 AuthContext login()
     } catch (err) {
-      console.error(err);
+      console.error("Login Error:", err);
     }
 
     setLoading(false);

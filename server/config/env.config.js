@@ -3,5 +3,6 @@ dotenv.config()
 
 export const ENV_CONFIG = {
     JWT_SECRET : process.env.JWT_SECRET,
-    MONGODB_URI:process.env.MONGODB_URI
+    MONGODB_URI:process.env.MONGODB_URI,
+    GEMINI_API_KEY:process.env.GEMINI_API_KEY,
 }

@@ -17,6 +17,7 @@ import { corsOptions } from './config/corsOptions.config.js';
 // Import the route modules
 import indexRouter from './routes/index.js';
 import usersRouter from './routes/users.js';
+import sessionRouter from './routes/session.routes.js'
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/session',sessionRouter)
 
 // Use 'export default' for the main application object
 export default app;
